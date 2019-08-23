@@ -325,8 +325,8 @@ def main():
             LOCATION_SELECT: [MessageHandler(Filters.regex('(동|읍|면|시|군|구)$'), location_select_and_save),
                               MessageHandler(Filters.regex('[^(동|읍|면)$]'), location_select_null)],
 
-            WEATHER: [MessageHandler(Filters.regex('^(아니|아직)'), weather),
-                      MessageHandler(Filters.regex('^(네|응|이미|그럼|당연|ㅇㅇ)'), weather_skip)]
+            WEATHER: [MessageHandler(Filters.regex('^(아니|아닝|아직)'), weather),
+                      MessageHandler(Filters.regex('^(네|넹|넵|응|이미|그럼|당연|ㅇㅇ)'), weather_skip)]
         },
 
         fallbacks=[CommandHandler('cancel', cancel)]
