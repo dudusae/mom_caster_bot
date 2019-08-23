@@ -12,7 +12,6 @@ client = MongoClient('localhost', 27017)
 db = client.mommbot
 
 my_token = config.my_token
-my_key_weather = config.my_key_weather
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -20,7 +19,6 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 GENDER, LOCATION, LOCATION_SELECT, WEATHER = range(4)
-
 
 # 챗봇함수 시작 ---------------------------------------------------------------
 
@@ -39,8 +37,9 @@ def start(update, context):
 # 딸, 아들 정보 저장하고 지역 물어보기
 def gender(update, context):
     chat_id = update.message.chat_id
+    chat_txt = update.message.text
 
-    if '딸' in update.message.text:
+    if '딸' in chat_txt:
         gender = '딸'
     else:
         gender = '아들'
@@ -64,43 +63,43 @@ def location(update, context):
     chat_id = update.message.chat_id
     chat_txt = update.message.text
 
-    search_result = db.location.find({'3단계': {'$regex':chat_txt+'$'}})
-    search_result_list = []
+    find_location = db.location.find({'읍면동': {'$regex':chat_txt+'$'}})
+    find_locations = []
 
-    for i in search_result:
-        search_result_list.append(i)
+    for i in find_location:
+        find_locations.append(i)
 
     # 1 검색결과가 1개일 때 DB에 저장하고 저장했다고 알려줌
-    if len(search_result_list) == 1:
+    if len(find_locations) == 1:
         reply_keyboard = [[emojize('아니요 알려주세요:raised_hands:', use_aliases=True),
                            emojize('네 이미 알고 있죠:v:', use_aliases=True)]]
 
         db.user.find_one_and_update({'chat_id': chat_id},
-                                             {'$set': {'location_id': search_result_list[0]['_id']}})
-        update.message.reply_text(search_result_list[0]['3단계']+'이구나 기억했다.\n오늘 일기예보는 확인했니?',
+                                    {'$set': {'location_id': find_locations[0]['_id']}})
+        update.message.reply_text(find_locations[0]['읍면동']+'이구나 기억했다.\n오늘 일기예보는 확인했니?',
                                   reply_markup=ReplyKeyboardMarkup(reply_keyboard,one_time_keyboard=True))
         return WEATHER
 
     # 2 검색결과가 2개 이상일 때 다시 확인한다
-    elif len(search_result_list) >= 2:
+    elif len(find_locations) >= 2:
         reply_keyboard = []
-        for i in search_result_list:
-            reply_keyboard.append(i['1단계']+' '+i['2단계']+' '+i['3단계'])
+        for i in find_locations:
+            reply_keyboard.append(i['시도']+' '+i['시군구']+' '+i['읍면동'])
         reply_keyboard.append('이 중에는 없어요')
         update.message.reply_text(chat_txt + ', 여러 곳이있네. \n이중에 어디를 말하는거니?',
-                                  reply_markup=ReplyKeyboardMarkup.from_column(reply_keyboard, one_time_keyboard=True))
+                                  reply_markup=ReplyKeyboardMarkup.from_column(reply_keyboard,one_time_keyboard=True))
         return LOCATION_SELECT
 
     # 3 입력한 지역정보를 찾을 수 없을 때 다시 물어봄
     else:
         update.message.reply_html('엄마는 잘 모르는 곳인 것 같구나'+emojize(':eyes:', use_aliases=True)
-                                  +'\n<b>시나 군</b> 이름으로 알려줘.')
+                                  +'\n<b>시, 군, 구</b> 이름으로 알려줘.')
         return LOCATION
 
 
 def location_null(update, context):
     update.message.reply_html('이중에 없다구?'+ emojize(':speak_no_evil:', use_aliases=True)
-                              + '\n엄마가 모르는 동네인가 보다.\n<b>시나 군</b> 이름으로 알려줘.')
+                              + '\n엄마가 모르는 동네인가 보다.\n<b>시, 군, 구</b> 이름으로 알려줘.')
     return LOCATION
 
 
@@ -109,28 +108,28 @@ def location_city(update, context):
     chat_id = update.message.chat_id
     chat_txt = update.message.text
 
-    search_result = db.location.find({'$and': [{'2단계': {'$regex':chat_txt+'$'}},{'3단계':''}]})
-    search_result_list = []
+    find_location = db.location.find({'$and': [{'시군구': {'$regex':chat_txt+'$'}},{'읍면동':''}]})
+    find_locations = []
 
-    for i in search_result:
-        search_result_list.append(i)
+    for i in find_location:
+        find_locations.append(i)
 
     # 1 검색결과가 1개일 때 DB에 저장하고 저장했다고 알려줌
-    if len(search_result_list) == 1:
+    if len(find_locations) == 1:
         reply_keyboard = [[emojize('아니요 알려주세요:raised_hands:', use_aliases=True),
                            emojize('네 이미 알고 있죠:v:', use_aliases=True)]]
 
         db.user.find_one_and_update({'chat_id': chat_id},
-                                    {'$set': {'location_id': search_result_list[0]['_id']}})
-        update.message.reply_text(search_result_list[0]['2단계']+'이구나 기억했다.\n오늘 일기예보는 확인했니?',
+                                    {'$set': {'location_id': find_locations[0]['_id']}})
+        update.message.reply_text(find_locations[0]['시군구']+'이구나 기억했다.\n오늘 일기예보는 확인했니?',
                                   reply_markup=ReplyKeyboardMarkup(reply_keyboard,one_time_keyboard=True))
         return WEATHER
 
     # 2 검색결과가 2개 이상일 때 다시 확인한다
-    elif len(search_result_list) >= 2:
+    elif len(find_locations) >= 2:
         reply_keyboard = []
-        for i in search_result_list:
-            reply_keyboard.append(i['1단계']+' '+i['2단계'])
+        for i in find_locations:
+            reply_keyboard.append(i['시도']+' '+i['시군구'])
         reply_keyboard.append('이 중에는 없어요')
         update.message.reply_text(chat_txt + ', 여러 곳이있네. \n이중에 어디를 말하는거니?',
                                   reply_markup=ReplyKeyboardMarkup.from_column(reply_keyboard, one_time_keyboard=True))
@@ -138,9 +137,38 @@ def location_city(update, context):
 
     # 3 입력한 지역정보를 찾을 수 없을 때 다시 물어봄
     else:
-        update.message.reply_html('엄마는 잘 모르는 곳인 것 같구나'+emojize(':eyes:', use_aliases=True)
+        chat_txt = chat_txt[:2]
+        find_location = db.location.find({'$and': [{'시군구': {'$regex': '.*' + chat_txt + '.*'}}, {'읍면동': ''}]})
+        find_locations = []
+
+        for i in find_location:
+            find_locations.append(i)
+
+        if len(find_locations) == 1:
+            reply_keyboard = [[emojize('아니요 알려주세요:raised_hands:', use_aliases=True),
+                               emojize('네 이미 알고 있죠:v:', use_aliases=True)]]
+
+            db.user.find_one_and_update({'chat_id': chat_id},
+                                        {'$set': {'location_id': find_locations[0]['_id']}})
+            update.message.reply_text(find_locations[0]['시군구'] + '이구나 기억했다.\n오늘 일기예보는 확인했니?',
+                                      reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
+            return WEATHER
+
+        # 2 검색결과가 2개 이상일 때 다시 확인한다
+        elif len(find_locations) >= 2:
+            reply_keyboard = []
+            for i in find_locations:
+                reply_keyboard.append(i['시도'] + ' ' + i['시군구'])
+            reply_keyboard.append('이 중에는 없어요')
+            update.message.reply_text(chat_txt + ', 여러 곳이있네. \n이중에 어디를 말하는거니?',
+                                      reply_markup=ReplyKeyboardMarkup.from_column(reply_keyboard,
+                                                                                   one_time_keyboard=True))
+            return LOCATION_SELECT
+
+        else:
+            update.message.reply_html('엄마는 잘 모르는 곳인 것 같구나'+emojize(':eyes:', use_aliases=True)
                                   +'\n<b>다른 지명</b>으로 알려줘.')
-        return LOCATION
+            return LOCATION
 
 
 def location_error(update, context):
@@ -156,22 +184,22 @@ def location_save(update, context):
     reply_keyboard = [[emojize('아니요 알려주세요:raised_hands:', use_aliases=True),
                        emojize('이미 알고 있죠:v:', use_aliases=True)]]
 
-    if len(location_value) >= 3 :
-        search_result = db.location.find_one({'$and': [{'1단계': location_value[0]},
-                                                   {'2단계': location_value[1]},
-                                                   {'3단계': location_value[2]}]})
-        update.message.reply_text(search_result['1단계']+' '
-                                  + search_result['2단계']+' '
-                                  + search_result['3단계']
+    if len(location_value) >= 3:
+        find_location = db.location.find_one({'$and': [{'시도': location_value[0]},
+                                                   {'시군구': location_value[1]},
+                                                   {'읍면동': location_value[2]}]})
+        update.message.reply_text(find_location['시도']+' '
+                                  + find_location['시군구']+' '
+                                  + find_location['읍면동']
                                   + '이구나 기억했다.')
     else :
-        search_result = db.location.find_one({'$and': [{'1단계': location_value[0]},
-                                                   {'2단계': location_value[1]}]})
-        update.message.reply_text(search_result['1단계']+' '
-                                  + search_result['2단계']+' '
+        find_location = db.location.find_one({'$and': [{'시도': location_value[0]},
+                                                   {'시군구': location_value[1]}]})
+        update.message.reply_text(find_location['시도']+' '
+                                  + find_location['시군구']+' '
                                   + '이구나 기억했다.')
     db.user.find_one_and_update({'chat_id': chat_id},
-                                {'$set': {'location_id': search_result['_id']}})
+                                {'$set': {'location_id': find_location['_id']}})
     update.message.reply_text('오늘 일기예보는 확인했니?',
                               reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True))
 
@@ -180,27 +208,74 @@ def location_save(update, context):
 
 # 날씨를 알려준다
 def weather(update, context):
-    # user = update.message.from_user
-    # print(user['id'])
     chat_id = update.message.chat_id
-    print(chat_id)
-    location_id = db.user.find_one({'chat_id': chat_id})['location_id']
-    location_x = db.location.find_one({'_id': location_id})['격자 X']
-    location_y = db.location.find_one({'_id': location_id})['격자 Y']
-    print(location_x, location_y)
+    chat_location_id = db.user.find_one({'chat_id': chat_id})['location_id']
+    chat_location = db.location.find_one({'_id': chat_location_id})
+    
 
+    url = 'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?ServiceKey='
+    my_key_weather = config.my_key_weather
     now = datetime.datetime.now()
     today = now.strftime('%Y%m%d')
-    time = '0600'
+    release_time = (now - datetime.timedelta(hours=1)).strftime('%H00')
+    location_x = str(chat_location['격자 X'])
+    location_y = str(chat_location['격자 Y'])
 
-    r = requests.get(
-        'http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastGrib?ServiceKey='
-        + my_key_weather + '&base_date=' + today + '&base_time=' + time
-        + '&nx=' + str(location_x) + '&ny=' + str(location_y) + '&pageNo=1&numOfRows=1&_type=json')
+
+    r = requests.get(url + my_key_weather + '&base_date=' + today + '&base_time='+ release_time +
+                     '&nx=' + location_x + '&ny=' + location_y + '&pageNo=1&numOfRows=30&_type=json')
     rjson = r.json()
-    weather = rjson['response']['body']['items']['item']
-    print(weather)
-    update.message.reply_text('그래, 날씨를 알려줄께.\n'+weather['category']+':'+str(weather['obsrValue']),
+    weather_response = rjson['response']['body']['items']['item']
+    weather_message = ''
+
+
+    for weather in weather_response:
+        find_weather_dic = db.weather_dic.find_one({'cat': weather['category']})
+
+        cat = find_weather_dic['txt']
+        valueType = find_weather_dic['valueType']
+        value = weather['obsrValue']
+        unit = ''
+
+        if 'unit' in find_weather_dic:
+            unit = find_weather_dic['unit']
+        else:
+            unit = ''
+
+        if valueType == 'code':
+            value = find_weather_dic[str(value)]
+        elif valueType == 'cal':
+            if '풍향' in cat:
+                value = int(( value + 22.5 * 0.5 ) / 22.5)
+                value = find_weather_dic[str(value)]
+            elif '풍속' in cat:
+                if value < 4:
+                    value = '4m/s 연기 흐름에 따라 풍향감지가 가능한 약한 바람'
+                elif 4 <= value < 9 :
+                    value = '4~9m/s 안면에 감촉을 느끼면서 나뭇잎이 조금 흔들리는 약간 강한 바람'
+                elif 9 <= value < 14 :
+                    value = '9~14m/s 나무 가지와 깃발이 가볍게 흔들리는 강한 바람'
+                elif 14 <= value :
+                    value = '14m/s 먼지가 일고, 작은 나무 전체가 흔들리는 매우 강한 바람'
+            elif '낙뢰' in cat:
+                if 'getForecastGrib' in url:
+                    value = db.weather_dic.find_one({'cat': 'LGT1'})[value]
+
+                elif 'getForecastTimeData' in url:
+                    value = db.weather_dic.find_one({'cat': 'LGT2'})[value]
+
+        weather_txt = '\n' + cat + ' : ' + str(value) + unit
+
+        if valueType == 'ignore':
+            weather_txt = ''
+
+        weather_message = weather_message + weather_txt
+
+
+    print(weather_message)
+    update.message.reply_text('그래, 현재 날씨를 알려줄께.\n'
+                              +chat_location['시군구'] + ' ' + chat_location['읍면동'] +'의 현재 날씨란다.\n'
+                              +weather_message,
                               reply_markup=ReplyKeyboardRemove())
 
     return ConversationHandler.END
@@ -210,8 +285,7 @@ def weather_skip(update, context):
     chat_id = update.message.chat_id
     gender = db.user.find_one({'chat_id':chat_id})['gender']
     update.message.reply_text('우리'+gender+'이 웬일이래.'+emojize(':innocent:', use_aliases=True)
-                              +'\n그래 내일 아침부터 문자 넣을게.\n'
-                              +'주소 바뀌면 /location\n'
+                              +'\n그래 주소 바뀌면 /location\n'
                               +'날씨 궁금하면 /weather 라고 엄마한테 말해줘\n'
                               +'영어라고 어려워말고'+emojize(':kissing_heart:', use_aliases=True),
                               reply_markup=ReplyKeyboardRemove())
@@ -257,7 +331,7 @@ def main():
                      MessageHandler(Filters.regex('[^(딸|아들)]'), gender_error)],
 
             LOCATION: [MessageHandler(Filters.regex('(동|읍|면)$'), location),
-                              MessageHandler(Filters.regex('(시|군|구)$'), location_city),
+                       MessageHandler(Filters.regex('(시|군|구)$'), location_city),
                        MessageHandler(Filters.regex('[^(동|읍|면)$]'), location_error)],
 
             LOCATION_SELECT: [MessageHandler(Filters.regex('(동|읍|면|시|군|구)$'), location_save),
@@ -274,6 +348,7 @@ def main():
     dp.add_handler(conv_handler)
     dp.add_handler(MessageHandler(Filters.text, echo))
     dp.add_handler(CommandHandler("weather", weather))
+    dp.add_handler(CommandHandler("cancel", cancel))
 
     updater.start_polling()
 
