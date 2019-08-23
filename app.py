@@ -300,7 +300,7 @@ def echo(update, context):
     elif '엄마' in chat_txt:
         update.message.reply_text('왜~\n'
                                   + '날씨가 알고싶으면' + emojize(':point_right:', use_aliases=True) + '/weather\n'
-                                  + '주소가 바꼈으면' + emojize(':point_right:', use_aliases=True) + '/location')
+                                  + '주소가 바뀌었으면' + emojize(':point_right:', use_aliases=True) + '/location')
     else :
         update.message.reply_text(chat_txt)
 
@@ -323,7 +323,7 @@ def main():
                        MessageHandler(Filters.regex('[^(동|읍|면시|군|구)$]'), location_error)],
 
             LOCATION_SELECT: [MessageHandler(Filters.regex('(동|읍|면|시|군|구)$'), location_select_and_save),
-                              MessageHandler(Filters.regex('[^(동|읍|면)$]'), location_select_null)],
+                              MessageHandler(Filters.regex('[^(동|읍|면|시|군|구)$]'), location_select_null)],
 
             WEATHER: [MessageHandler(Filters.regex('^(아니|아닝|아직)'), weather),
                       MessageHandler(Filters.regex('^(네|넹|넵|응|이미|그럼|당연|ㅇㅇ)'), weather_skip)]
