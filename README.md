@@ -13,6 +13,10 @@ https://t.me/mommbot<br>
 <img src="https://github.com/dudusae/mom_caster_bot/blob/master/screenshot.jpeg" height="400px">
 
 
+## 간략한 코드구조 소개
+<img src="https://github.com/dudusae/mom_caster_bot/blob/master/telegrambot_def.jpg" height="400px">
+
+
 ## 의견 보내기
 
 엄마캐스터봇 프로젝트에 제안하고 싶은 사항이 있다면 이슈를 생성해주시길 바랍니다.
