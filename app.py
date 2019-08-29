@@ -234,9 +234,8 @@ def weather(update, context):
 
         weather_txt = '\n' + category + ' : ' + str(value) + unit
 
-        # 지나치게 세부적인 정보(ex.동서성분의 풍속)는 DB에 ignore로 분류하여 표시되지 않도록 하고,
-        # 날씨 값이 missing value일때도 정보를 표시하지 않는다.
-        if valueType == 'ignore' or value >=900 or value <=-900:
+        # 지나치게 세부적인 정보(ex.동서성분의 풍속)는 DB에 ignore로 분류하여 표시되지 않도록 한다.
+        if valueType == 'ignore':
             weather_txt = ''
 
         weather_message = weather_message + weather_txt
@@ -320,10 +319,8 @@ def echo(update, context):
                                   + '날씨가 알고싶으면' + emojize(':point_right:', use_aliases=True) + '/weather\n'
                                   + '주소가 바뀌었으면' + emojize(':point_right:', use_aliases=True) + '/location')
     else :
-        db.message.insert_one({'chat_id': chat_id, 'message': chat_txt})
-        update.message.reply_html('"'+chat_txt+'"'+'는 엄마가 아직 배우지 않은 말이야. 기억해뒀다가 답할 수 있도록 노력해볼게.\n\n'
-                                  + '날씨가 알고싶으면' + emojize(':point_right:', use_aliases=True) + '/weather\n'
-                                  + '주소가 바뀌었으면' + emojize(':point_right:', use_aliases=True) + '/location')
+        update.message.reply_text(chat_txt)
+
 
 
 
