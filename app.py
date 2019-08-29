@@ -224,8 +224,12 @@ def weather(update, context):
         else:
             unit = ''
 
+        # 유효성검사 : 900이상, -900이하 값은 Missing Value
+        if not -900 < int(value) < 900 :
+            value = 'null'
+
         # 날씨 값의 유형이 코드값(code)일때 weather_dic DB를 참조하여 변환
-        if valueType == 'code':
+        elif valueType == 'code':
             value = weather_dic[str(value)]
 
         # 날씨 값의 유형이 계산식(cal)을 거쳐 코드화 되어야 하는 값일 때 항목에 맞는 계산식을 적용
@@ -234,8 +238,10 @@ def weather(update, context):
 
         weather_txt = '\n' + category + ' : ' + str(value) + unit
 
-        # 지나치게 세부적인 정보(ex.동서성분의 풍속)는 DB에 ignore로 분류하여 표시되지 않도록 한다.
-        if valueType == 'ignore':
+        # 지나치게 세부적인 정보(ex.동서성분의 풍속)는 DB에 ignore로 분류하고 표시되지 않도록 한다.
+        # 혹은 유효성 검사에서 null이 된 값 역시 표시되지 않도록 한다.
+
+        if valueType == 'ignore' or value == 'null':
             weather_txt = ''
 
         weather_message = weather_message + weather_txt
@@ -315,13 +321,16 @@ def echo(update, context):
         update.message.reply_text('나도 사랑해 내새끼~'+emojize(':revolving_hearts:', use_aliases=True),
                               reply_markup=ReplyKeyboardRemove())
     elif '엄마' in chat_txt:
-        update.message.reply_text('왜~\n'
-                                  + '날씨가 알고싶으면' + emojize(':point_right:', use_aliases=True) + '/weather\n'
-                                  + '주소가 바꼈으면' + emojize(':point_right:', use_aliases=True) + '/location')
+        update.message.reply_text('왜~\n')
+        message_command_guide(update)
     else :
-        update.message.reply_text(chat_txt)
+        db.message.insert_one({'chat_id': chat_id, 'message': chat_txt})
+        update.message.reply_text('"' + chat_txt + '"' + '는 엄마가 아직 배우지 않은 말이야. 기억해뒀다가 답할 수 있도록 노력해볼게.')
+        message_command_guide(update)
 
-
+def message_command_guide(update):
+    update.message.reply_text('날씨가 알고싶으면' + emojize(':point_right:', use_aliases=True) + '/weather\n'
+                              + '주소가 바뀌었으면' + emojize(':point_right:', use_aliases=True) + '/location')
 
 
 # 챗봇 실행
