@@ -37,13 +37,20 @@ def start(update, context):
 def gender(update, context):
     chat_id = update.message.chat_id
     chat_txt = update.message.text
+    db_chat_id = db.user.find_one({'chat_id': chat_id})['chat_id']
 
     if '딸' in chat_txt:
         gender = '딸'
     else:
         gender = '아들'
 
-    db.user.insert_one({'chat_id': chat_id, 'gender': gender})
+
+    if chat_id == db_chat_id:
+        db.user.find_one_and_update({'chat_id': chat_id},
+                                {'$set': {'gender': gender}})
+    else:
+        db.user.insert_one({'chat_id': chat_id, 'gender': gender})
+
 
     update.message.reply_text('우리'+gender+emojize(':heart:', use_aliases=True)+
                               '밥먹었니?\n나는 날씨를 알려주는 날씨 엄마란다',
@@ -70,12 +77,15 @@ def location_find(update, context):
         for i in location:
             locations.append(i)
 
+        # 좌표DB를 검색하여 일치하는 지역이 1개일 경우 바로 저장한다
         if len(locations) == 1:
             return location_save(chat_id, locations, location_unit, update)
 
+        # 좌표DB를 검색하여 일치하는 지역이 2개일 경우 여러 지역 중 어디가 맞는지 되묻는다
         elif len(locations) >= 2:
             return location_select(chat_txt, locations, location_unit, update)
 
+        # 좌표DB를 검색하여 일치하는 지역이 없을경우 검색범위를 확장하여 재검색한다.
         else:
             location = location_find_round_2(location_unit, chat_txt)
             i = i+1
@@ -199,6 +209,7 @@ def weather(update, context):
     weather_message = ''
 
 
+    # 날씨API에서 코드형태로 받은 값을 우리가 이해할 수 있는 말로 바꿔준다(ex.POP=강수확률)
     for weather in weather_response:
         weather_dic = db.weather_dic.find_one({'cat': weather['category']})
 
@@ -207,19 +218,25 @@ def weather(update, context):
         value = weather['obsrValue']
         unit = ''
 
+        # 날씨 값의 단위(ex.%)가 있는 값은 표시하고 없는값은 표시하지 않는다.
         if 'unit' in weather_dic:
             unit = weather_dic['unit']
         else:
             unit = ''
 
+        # 날씨 값의 유형이 코드값(code)일때 weather_dic DB를 참조하여 변환
         if valueType == 'code':
             value = weather_dic[str(value)]
+
+        # 날씨 값의 유형이 계산식(cal)을 거쳐 코드화 되어야 하는 값일 때 항목에 맞는 계산식을 적용
         elif valueType == 'cal':
             value = weather_calculator(category, url, value, weather_dic)
 
         weather_txt = '\n' + category + ' : ' + str(value) + unit
 
-        if valueType == 'ignore':
+        # 지나치게 세부적인 정보(ex.동서성분의 풍속)는 DB에 ignore로 분류하여 표시되지 않도록 하고,
+        # 날씨 값이 missing value일때도 정보를 표시하지 않는다.
+        if valueType == 'ignore' or value >=900 or value <=-900:
             weather_txt = ''
 
         weather_message = weather_message + weather_txt
@@ -289,6 +306,7 @@ def cancel(update, context):
 
 # 기타 메시지에 대한 챗봇의 답변 패턴
 def echo(update, context):
+    chat_id = update.message.chat_id
     chat_txt = update.message.text
 
     if '엄마최고'in chat_txt:
@@ -302,7 +320,11 @@ def echo(update, context):
                                   + '날씨가 알고싶으면' + emojize(':point_right:', use_aliases=True) + '/weather\n'
                                   + '주소가 바뀌었으면' + emojize(':point_right:', use_aliases=True) + '/location')
     else :
-        update.message.reply_text(chat_txt)
+        db.message.insert_one({'chat_id': chat_id, 'message': chat_txt})
+        update.message.reply_html('"'+chat_txt+'"'+'는 엄마가 아직 배우지 않은 말이야. 기억해뒀다가 답할 수 있도록 노력해볼게.\n\n'
+                                  + '날씨가 알고싶으면' + emojize(':point_right:', use_aliases=True) + '/weather\n'
+                                  + '주소가 바뀌었으면' + emojize(':point_right:', use_aliases=True) + '/location')
+
 
 
 # 챗봇 실행
